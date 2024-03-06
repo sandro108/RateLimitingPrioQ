@@ -1,14 +1,13 @@
 package org.example;
 
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 
 import com.google.common.util.concurrent.RateLimiter;
 
 public class RateLimitingPrioQ implements Comparator<User> {
 
     RateLimiter rateLimiter;
-    private Map<Integer, Integer> counterMap; // Map<user.UID, RequestCounter>
+    private Map<Integer, Integer> requestCounterMap; // Map<user.UID, RequestCounter>
     private Queue<User> prioQ;
     private static int REQUEST_COUNT_LIMIT = 5;
     private final static int HIGH_PRIO = 100;
@@ -16,7 +15,7 @@ public class RateLimitingPrioQ implements Comparator<User> {
 
     public RateLimitingPrioQ(int permitsPerTimeUnit, int requestCountLimit){
         this.rateLimiter = RateLimiter.create(permitsPerTimeUnit);
-        this.counterMap = new HashMap<>();
+        this.requestCounterMap = new HashMap<>();
         this.prioQ = new PriorityQueue<>(this::compare);
         REQUEST_COUNT_LIMIT = requestCountLimit;
 
@@ -24,7 +23,7 @@ public class RateLimitingPrioQ implements Comparator<User> {
 
 
     @Override
-    public int compare(User user1, User user2) {
+    public int compare(User user1, User user2) { //TODO: revisit and complete the logic
         if (user1.getPriority() == user2.getPriority()){
             return user1.getArrivalTime().compareTo(user2.getArrivalTime());
         } else if (user1.getPriority() < user2.getPriority()) {
@@ -38,17 +37,17 @@ public class RateLimitingPrioQ implements Comparator<User> {
     public boolean enqueUserRequest(User user){
         if (user != null) {
             Integer uid = user.getUID();
-            if (!this.counterMap.containsKey(uid)) {
-                this.counterMap.put(uid, 1);
+            if (!this.requestCounterMap.containsKey(uid)) { // new user
+                this.requestCounterMap.put(uid, 1);
                 this.prioQ.add(user);
             } else {
-                Integer newCount = counterMap.get(uid);
+                Integer newCount = requestCounterMap.get(uid); // existing user
                 if (newCount > REQUEST_COUNT_LIMIT) {
                     user.setPriority(LOW_PRIO);
                 }
-                this.prioQ.add(user);
+                this.prioQ.add(user); // add new request of known user to prioQ
                 ++newCount;
-                this.counterMap.replace(uid, newCount);
+                this.requestCounterMap.replace(uid, newCount); // update request counter
             }
             return true;
         }
@@ -60,15 +59,25 @@ public class RateLimitingPrioQ implements Comparator<User> {
      * @return if not null: the dequed user (request) , null otherwise
      */
     public User dequeUserRequest(){
-        User user = this.prioQ.remove();
-        if (user != null) {
-            Integer uid = user.getUID();
-            if (this.counterMap.containsKey(uid)) {
-                Integer newCount = counterMap.get(uid);
-                this.counterMap.replace(uid, --newCount);
-            }
-            return user;
+        User user = this.prioQ.poll(); // retrieve user who's first in Q
+        if (user == null) {
+            return null;
         }
-        return null;
+        Integer uid = user.getUID();
+        if (this.requestCounterMap.containsKey(uid)) { // if user is known, decrement request counter
+            Integer newCount = requestCounterMap.get(uid);
+            this.requestCounterMap.replace(uid, --newCount);
+        }
+        return user;
     }
+
+    public void applyRateLimiting(User user){
+        if (user != null) {
+            if (user.getPriority() == HIGH_PRIO) {
+                rateLimiter.acquire();
+            }
+        }
+    }
+
+
 }
