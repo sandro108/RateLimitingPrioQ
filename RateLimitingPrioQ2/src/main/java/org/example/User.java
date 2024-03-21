@@ -29,6 +29,15 @@ public class User {
         return Objects.hash(getUID(), getArrivalTime());
     }
 
+    @Override
+    public String toString() {
+        return "User{" +
+                "UID=" + UID +
+                ", arrivalTime=" + arrivalTime +
+                ", priority=" + priority +
+                '}';
+    }
+
     public int getUID() {
         return UID;
     }
@@ -44,4 +53,6 @@ public class User {
     public LocalDateTime getArrivalTime() {
         return arrivalTime;
     }
+
+
 }
