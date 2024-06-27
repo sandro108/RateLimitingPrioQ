@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.time.LocalTime;
 import java.util.*;
 import org.json.*;
 import com.google.common.util.concurrent.RateLimiter;
@@ -13,6 +14,7 @@ public class RateLimitingPrioQ implements Comparator<User> {
     RateLimiter rateLimiter;
     private Map<Integer, Integer> requestCounterMap; // Map<user.UID, RequestCounter>
     private Queue<User> prioQ;
+    private User userPrev;
     private static int REQUEST_COUNT_LIMIT;
     private final static int HIGH_PRIO = 100;
     private final static int LOW_PRIO = 20;
@@ -34,6 +36,28 @@ public class RateLimitingPrioQ implements Comparator<User> {
         } else if (user1.getPriority() < user2.getPriority()) {
             return 1;
         } else if (user1.getPriority() > user2.getPriority()) {
+            return -1;
+        } else {
+                throw new IllegalArgumentException("PrioQ: Comparison impossible.");
+            }
+
+    }
+    public int determineReqArrTimeDiff(User userPrev, User userCurrent) { //TODO: revisit and complete the logic
+        LocalTime timePrev = userPrev.getArrivalTime();
+        LocalTime timeCurrent = userCurrent.getArrivalTime();
+        Integer timeDiff = timeCurrent.toSecondOfDay() - timeCurrent.toSecondOfDay(); //TODO: maybe use .toNanoOfDay() instead (returns a long)
+        return timeDiff;
+
+
+
+        if (timeDiff > 5){  //TODO: magic number
+
+
+
+            return 0;
+        } else if (userPrev.getPriority() < userCurrent.getPriority()) {
+            return 1;
+        } else if (userPrev.getPriority() > userCurrent.getPriority()) {
             return -1;
         } else {
                 throw new IllegalArgumentException("PrioQ: Comparison impossible.");
