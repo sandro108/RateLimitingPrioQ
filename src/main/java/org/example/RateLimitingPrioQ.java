@@ -6,10 +6,14 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.time.LocalTime;
 import java.util.*;
+import java.util.logging.Logger;
+
 import org.json.*;
 import com.google.common.util.concurrent.RateLimiter;
 
 public class RateLimitingPrioQ implements Comparator<User> {
+
+    private static final Logger logger = Logger.getLogger(RateLimitingPrioQ.class.getName());
 
     RateLimiter rateLimiter;
     private Map<Integer, Integer> requestCounterMap; // Map<user.UID, RequestCounter>
@@ -45,7 +49,9 @@ public class RateLimitingPrioQ implements Comparator<User> {
     }
     private boolean isArrTimeDiffAboveThresh(LocalTime userPrev, LocalTime userCurrent) {
         int arrTimeDiff = userCurrent.getNano() - userPrev.getNano();  //TODO: maybe use unix timestamp instead
-        if (arrTimeDiff > 20) { //TODO: millis or nanos??
+        System.out.println("CAT: " + userCurrent + ", PAT: " + userPrev + ", ATD: " + arrTimeDiff);
+//        logger.info("Arrival time difference: " + arrTimeDiff);
+        if (arrTimeDiff > 25) { //TODO: millis or nanos??
             return true;
         }
         return false;
@@ -55,7 +61,7 @@ public class RateLimitingPrioQ implements Comparator<User> {
 
     // find a way how to upgrade the priority of a user
 
-    public boolean enQuserRequest(User user) {
+    public synchronized boolean enQuserRequest(User user) {
         if (user != null) {
             Integer uid = user.getUID();
             LocalTime currArrTime = user.getArrivalTime();
@@ -67,15 +73,18 @@ public class RateLimitingPrioQ implements Comparator<User> {
             } else {
                 Integer newCount = requestCounterMap.get(uid); // existing user
                 LocalTime prevArrTime = this.lastArrivalTimeMap.get(uid);
+                this.lastArrivalTimeMap.replace(uid, currArrTime); // update last arrival time
+                ++newCount;
                 if (isArrTimeDiffAboveThresh(prevArrTime, currArrTime) && userPrio != HIGH_PRIO) {
+                    writeToFile("User: " + uid + " has been upgraded to HIGH_PRIO.\n");
                     user.setPriority(HIGH_PRIO);
-                }else if (++newCount > REQUEST_COUNT_LIMIT && userPrio != LOW_PRIO) {
+                    newCount = 1;
+                }else if (newCount > REQUEST_COUNT_LIMIT && userPrio != LOW_PRIO) {
                     user.setPriority(LOW_PRIO);
-                }else if (++newCount <= REQUEST_COUNT_LIMIT && userPrio != HIGH_PRIO) {
+                }else if (newCount <= REQUEST_COUNT_LIMIT && userPrio != HIGH_PRIO) {
                     user.setPriority(HIGH_PRIO);
                 }
                 this.prioQ.add(user); // add new request of known user to prioQ
-//                ++newCount;
                 this.requestCounterMap.replace(uid, newCount); // update request counter
             }
             return true;
@@ -125,7 +134,7 @@ public class RateLimitingPrioQ implements Comparator<User> {
     }
     public void writeToFile(Object any) {
         try (PrintWriter pw = new PrintWriter(new FileOutputStream(new File(FILE_OUT),true))) {
-            pw.append(any.toString()).append('\n');
+            pw.append(any.toString());//.append('\n');
 //            pw.close();
         }
          catch (IOException e) {
@@ -158,7 +167,7 @@ public class RateLimitingPrioQ implements Comparator<User> {
         REQUEST_COUNT_LIMIT = requestCountLimit;
     }
 
-    public Queue<User> getPrioQ() {
+    public synchronized Queue<User> getPrioQ() {
         return prioQ;
     }
 }
