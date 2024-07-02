@@ -13,8 +13,8 @@ public class RateLimitingPrioQ implements Comparator<User> {
 
     RateLimiter rateLimiter;
     private Map<Integer, Integer> requestCounterMap; // Map<user.UID, RequestCounter>
+    private Map<Integer, LocalTime> lastArrivalTimeMap; // Map<user.UID, lastArrivalTime>
     private Queue<User> prioQ;
-    private User userPrev;
     private static int REQUEST_COUNT_LIMIT;
     private final static int HIGH_PRIO = 100;
     private final static int LOW_PRIO = 20;
@@ -23,7 +23,8 @@ public class RateLimitingPrioQ implements Comparator<User> {
     public RateLimitingPrioQ(int permitsPerTimeUnit, int requestCountLimit) {
         this.rateLimiter = RateLimiter.create(permitsPerTimeUnit);
         this.requestCounterMap = new HashMap<>();
-        this.prioQ = new PriorityQueue<>(this::compare);
+        this.lastArrivalTimeMap = new HashMap<>();
+        this.prioQ = new PriorityQueue<>(this);
         REQUEST_COUNT_LIMIT = requestCountLimit;
 
     }
@@ -42,27 +43,12 @@ public class RateLimitingPrioQ implements Comparator<User> {
             }
 
     }
-    public int determineReqArrTimeDiff(User userPrev, User userCurrent) { //TODO: revisit and complete the logic
-        LocalTime timePrev = userPrev.getArrivalTime();
-        LocalTime timeCurrent = userCurrent.getArrivalTime();
-        Integer timeDiff = timeCurrent.toSecondOfDay() - timeCurrent.toSecondOfDay(); //TODO: maybe use .toNanoOfDay() instead (returns a long)
-        return timeDiff;
-
-
-
-        if (timeDiff > 5){  //TODO: magic number
-
-
-
-            return 0;
-        } else if (userPrev.getPriority() < userCurrent.getPriority()) {
-            return 1;
-        } else if (userPrev.getPriority() > userCurrent.getPriority()) {
-            return -1;
-        } else {
-                throw new IllegalArgumentException("PrioQ: Comparison impossible.");
-            }
-
+    private boolean isArrTimeDiffAboveThresh(LocalTime userPrev, LocalTime userCurrent) {
+        int arrTimeDiff = userCurrent.getNano() - userPrev.getNano();  //TODO: maybe use unix timestamp instead
+        if (arrTimeDiff > 20) { //TODO: millis or nanos??
+            return true;
+        }
+        return false;
     }
 
 
@@ -72,14 +58,20 @@ public class RateLimitingPrioQ implements Comparator<User> {
     public boolean enQuserRequest(User user) {
         if (user != null) {
             Integer uid = user.getUID();
+            LocalTime currArrTime = user.getArrivalTime();
+            int userPrio = user.getPriority();
             if (!this.requestCounterMap.containsKey(uid)) { // new user
                 this.requestCounterMap.put(uid, 1);
+                this.lastArrivalTimeMap.put(uid, currArrTime);
                 this.prioQ.add(user);
             } else {
                 Integer newCount = requestCounterMap.get(uid); // existing user
-                if (++newCount > REQUEST_COUNT_LIMIT) {
+                LocalTime prevArrTime = this.lastArrivalTimeMap.get(uid);
+                if (isArrTimeDiffAboveThresh(prevArrTime, currArrTime) && userPrio != HIGH_PRIO) {
+                    user.setPriority(HIGH_PRIO);
+                }else if (++newCount > REQUEST_COUNT_LIMIT && userPrio != LOW_PRIO) {
                     user.setPriority(LOW_PRIO);
-                }else if (++newCount <= REQUEST_COUNT_LIMIT) {
+                }else if (++newCount <= REQUEST_COUNT_LIMIT && userPrio != HIGH_PRIO) {
                     user.setPriority(HIGH_PRIO);
                 }
                 this.prioQ.add(user); // add new request of known user to prioQ
@@ -144,6 +136,10 @@ public class RateLimitingPrioQ implements Comparator<User> {
 
     public Map<Integer, Integer> getRequestCounterMap() {
         return requestCounterMap;
+    }
+
+    public Map<Integer, LocalTime> getLastArrivalTimeMap() {
+        return lastArrivalTimeMap;
     }
 
     public String getFILE_OUT() {
