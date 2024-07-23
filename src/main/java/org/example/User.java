@@ -5,15 +5,15 @@ import java.util.Objects;
 
 public class User {
     //this UID must most probably be constituted by the user's IP address
-    // and the port number of the socket connection.
+    // and the port number of the socket connection. So in principle the socket address of the http connection.
     private int UID;
-    private LocalTime arrivalTime;
-    public int cnt;
+    private /*LocalTime*/ Long arrivalTime;
+    private int cnt;
 
     private int priority;
 
     public User(int UID, int cnt) {
-        this.arrivalTime = LocalTime.now(); // this is used as default metric for PrioQ
+        this.arrivalTime = LocalTime.now().toNanoOfDay(); // this is used as default metric for PrioQ
         this.UID = UID;  // only needed for mapping user to request counter!
         this.priority = 100; // TODO: magic number  //this is used as metric for PrioQ, if request Counter is exceeded!
         this.cnt = cnt;
@@ -54,8 +54,12 @@ public class User {
         this.priority = priority;
     }
 
-    public LocalTime getArrivalTime() {
+    public Long getArrivalTime() {
         return arrivalTime;
+    }
+
+    public int getCnt() {
+        return cnt;
     }
 
 
