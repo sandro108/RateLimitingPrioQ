@@ -33,7 +33,7 @@ public class User {
     }
 
     @Override
-    public String toString() {
+    public synchronized String toString() {
         return "User{" +
                 "UID=" + UID +
                 ", arrTime=" + arrivalTime +
@@ -42,23 +42,23 @@ public class User {
                 '}';
     }
 
-    public int getUID() {
+    public synchronized int getUID() {
         return UID;
     }
 
-    public int getPriority() {
+    public synchronized int getPriority() {
         return priority;
     }
 
-    public void setPriority(int priority) {
+    public synchronized void setPriority(int priority) {
         this.priority = priority;
     }
 
-    public Long getArrivalTime() {
+    public synchronized Long getArrivalTime() {
         return arrivalTime;
     }
 
-    public int getCnt() {
+    public synchronized int getCnt() {
         return cnt;
     }
 
