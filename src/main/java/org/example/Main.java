@@ -21,7 +21,7 @@ public class Main {
     private static int req_cnt_eq = 1;
 
     public static void main(String[] args) throws InterruptedException {
-        ExecutorService executorService = Executors.newSingleThreadScheduledExecutor();   //.newFixedThreadPool(1);
+        ExecutorService executorService = Executors.newFixedThreadPool(2);//.newSingleThreadScheduledExecutor();   //.newFixedThreadPool(1);
         ExecutorService executorService2 = Executors.newSingleThreadScheduledExecutor(); // .newFixedThreadPool(1);
         RateLimitingPrioQ prioQ = new RateLimitingPrioQ(1, 5);
         Random random = new Random(42L);
@@ -64,7 +64,6 @@ public class Main {
             });
 
             executorService2.execute(new Runnable() {
-
                 public void run() {
                     logger.info("Dequeueing done by Thread: " + Thread.currentThread().getId());
 

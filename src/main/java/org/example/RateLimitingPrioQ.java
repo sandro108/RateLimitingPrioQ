@@ -4,8 +4,6 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.time.LocalTime;
-import java.util.AbstractQueue;
 import java.util.Comparator;
 import java.util.Map;
 import java.util.Queue;
@@ -17,6 +15,21 @@ import org.json.*;
 import com.google.common.util.concurrent.RateLimiter;
 
 public class RateLimitingPrioQ implements Comparator<User> {
+
+    /******************************************************************
+     *
+     * TODO 1: implement a strict upper limit for the number of requests from one user
+     * TODO 1: send this user a 429 (?) "Too many requests" right away and drop further requests
+     * => but what to do to recover the user from being banned??
+     *
+     * TODO 2: Check if starvation is possible (with the current implementation) for a user
+     * whose requests have been downgraded in prio,
+     * if his request are only followed by other user's requests with high priority?
+     * Idea: Set a timer. After timer expires. iterate through PrioQ (or only the last 100 elements)
+     * and if they have prio==20, upgrade them to prio=100. (not possible with current java.util.PrioQ...though!)
+     * Implement your own modifiable minHeap? See:
+     * https://drops.dagstuhl.de/storage/00lipics/lipics-vol046-opodis2015/LIPIcs.OPODIS.2015.15/LIPIcs.OPODIS.2015.15.pdf
+     */
 
     private static final Logger logger = Logger.getLogger(RateLimitingPrioQ.class.getName());
 
@@ -35,10 +48,7 @@ public class RateLimitingPrioQ implements Comparator<User> {
         this.lastArrivalTimeMap = new ConcurrentHashMap<>();
         this.prioQ = new PriorityBlockingQueue<>(100, this);
         REQUEST_COUNT_LIMIT = requestCountLimit;
-
     }
-
-
     @Override
     public int compare(User user1, User user2) {
         if (user1.getPriority() == user2.getPriority()){
@@ -53,10 +63,14 @@ public class RateLimitingPrioQ implements Comparator<User> {
 
     }
     private boolean isArrTimeDiffAboveThresh(User user, Long userPrev, Long userCurrent) {
-        long arrTimeDiff = userCurrent - userPrev;  //TODO: maybe use unix timestamp instead
+        long arrTimeDiff = userCurrent - userPrev;
         System.out.println("UID: " + user.getUID() + " cnt: " + user.getCnt() + " CAT: " + userCurrent + ", PAT: " + userPrev + ", ATD: " + arrTimeDiff);
 //        logger.info("Arrival time difference: " + arrTimeDiff);
-        return (arrTimeDiff > 800_000L);  //TODO: millis or nanos?? Nanos now!
+        return (arrTimeDiff > 800_000L);  //nanos! //TODO: magic number!
+    }
+
+    public boolean upgradePrioAfterXsecs(int secs) {
+        for prioQ
     }
 
     public boolean enQuserRequest(User user) {
@@ -103,41 +117,19 @@ public class RateLimitingPrioQ implements Comparator<User> {
         }
         return user;
     }
-
-    public void applyRateLimiting(User user) {
-        if (user != null) {
-            if (user.getPriority() == HIGH_PRIO) {
-                rateLimiter.acquire();
-            }
-        }
-    }
-
     public synchronized JSONObject convMapToJSONObj(Map<Integer,Integer> map) {
         return new JSONObject(map);
     }
 
-    public synchronized void writeJSON2File(JSONObject jsonObject) {
-//        String[] jsonString = new StringBuilder(jsonObject);
-        try (PrintWriter pw = new PrintWriter(new File(FILE_OUT))) {
-            pw.append(jsonObject.toString()).append('\n');
-//            pw.close();
-        }
-         catch (IOException e) {
-            e.printStackTrace();
-             throw new RuntimeException(e);
-         }
-    }
     public synchronized void writeToFile(Object any) {
         try (PrintWriter pw = new PrintWriter(new FileOutputStream(new File(FILE_OUT),true))) {
-            pw.append(any.toString());//.append('\n');
-//            pw.close();
+            pw.append(any.toString());
         }
          catch (IOException e) {
             e.printStackTrace();
              throw new RuntimeException(e);
          }
     }
-
     public synchronized Map<Integer, Integer> getRequestCounterMap() {
         return requestCounterMap;
     }
@@ -157,11 +149,9 @@ public class RateLimitingPrioQ implements Comparator<User> {
     public /*synchronized*/ static int getRequestCountLimit() {
         return REQUEST_COUNT_LIMIT;
     }
-
     public /*synchronized*/ static void setRequestCountLimit(int requestCountLimit) {
         REQUEST_COUNT_LIMIT = requestCountLimit;
     }
-
     public synchronized Queue<User> getPrioQ() {
         return prioQ;
     }
