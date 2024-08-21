@@ -9,12 +9,12 @@ public class User {
     private int UID;
     private Long arrivalTime;
     private int cnt;
-    private int priority;
+    private String priority;
 
     public User(int UID, int cnt) {
         this.arrivalTime = LocalTime.now().toNanoOfDay(); // this is used as default metric for PrioQ
         this.UID = UID;  // only needed for mapping user to request counter!
-        this.priority = 100; // TODO: magic number  //this is used as metric for PrioQ, if request Counter is exceeded!
+        this.priority = "F"; // TODO: magic number
         this.cnt = cnt;
     }
     @Override
@@ -29,12 +29,13 @@ public class User {
         return Objects.hash(getUID(), getArrivalTime());
     }
 
+    //TODO: make it csv compatible!!
     @Override
     public synchronized String toString() {
         return "User{" +
                 "UID=" + UID +
                 ", arrTime=" + arrivalTime +
-                ", prio=" + priority +
+                ", prioQ=" + priority +
                 ", cnt= " + cnt +
                 '}';
     }
@@ -43,11 +44,11 @@ public class User {
         return UID;
     }
 
-    public synchronized int getPriority() {
+    public synchronized String getPriority() {
         return priority;
     }
 
-    public synchronized void setPriority(int priority) {
+    public synchronized void setPriority(String priority) {
         this.priority = priority;
     }
 

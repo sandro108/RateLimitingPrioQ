@@ -14,7 +14,7 @@ import java.util.logging.Logger;
 import org.json.*;
 import com.google.common.util.concurrent.RateLimiter;
 
-public class RateLimitingPrioQ implements Comparator<User> {
+public class RateLimitingPrioQ /*implements Comparator<User>*/ {
 
     /******************************************************************
      *
@@ -46,10 +46,10 @@ public class RateLimitingPrioQ implements Comparator<User> {
         this.rateLimiter = RateLimiter.create(permitsPerTimeUnit);
         this.requestCounterMap = new ConcurrentHashMap<>();
         this.lastArrivalTimeMap = new ConcurrentHashMap<>();
-        this.prioQ = new PriorityBlockingQueue<>(100, this);
+        this.prioQ = new PriorityBlockingQueue<>(100/*, this*/);
         REQUEST_COUNT_LIMIT = requestCountLimit;
     }
-    @Override
+   /* @Override
     public int compare(User user1, User user2) {
         if (user1.getPriority() == user2.getPriority()){
             return user1.getArrivalTime().compareTo(user2.getArrivalTime());
@@ -61,7 +61,7 @@ public class RateLimitingPrioQ implements Comparator<User> {
                 throw new IllegalArgumentException("PrioQ: Comparison impossible.");
             }
 
-    }
+    }*/
     private boolean isArrTimeDiffAboveThresh(User user, Long userPrev, Long userCurrent) {
         long arrTimeDiff = userCurrent - userPrev;
         System.out.println("UID: " + user.getUID() + " cnt: " + user.getCnt() + " CAT: " + userCurrent + ", PAT: " + userPrev + ", ATD: " + arrTimeDiff);
@@ -69,9 +69,7 @@ public class RateLimitingPrioQ implements Comparator<User> {
         return (arrTimeDiff > 800_000L);  //nanos! //TODO: magic number!
     }
 
-    public boolean upgradePrioAfterXsecs(int secs) {
-        for prioQ
-    }
+
 
     public boolean enQuserRequest(User user) {
         if (user != null) {
@@ -89,7 +87,7 @@ public class RateLimitingPrioQ implements Comparator<User> {
                 ++newCount;
                 boolean isATDaboveThresh = isArrTimeDiffAboveThresh(user, prevArrTime, currArrTime);
                 if (newCount > REQUEST_COUNT_LIMIT && !isATDaboveThresh) {
-                    user.setPriority(LOW_PRIO);
+
                     writeToFile("User: " + uid + ", request: " + user.getCnt() + " has been downgraded to " + user.getPriority() + ".\n");
                 }
                 this.prioQ.put(user); // add new request of known user or block 'till space to put is available again

@@ -15,15 +15,16 @@ public class Main {
 
     private static final Logger logger = Logger.getLogger(Main.class.getName());
 
+    /*this is just for print outs of sequence */
     static int cnt = 0;
     private static final int MAX_REQUESTS = 50;
     private static int req_cnt_dq = 1;
     private static int req_cnt_eq = 1;
 
     public static void main(String[] args) throws InterruptedException {
-        ExecutorService executorService = Executors.newFixedThreadPool(2);//.newSingleThreadScheduledExecutor();   //.newFixedThreadPool(1);
+        ExecutorService executorService = Executors.newSingleThreadScheduledExecutor();   //.newFixedThreadPool(1);
         ExecutorService executorService2 = Executors.newSingleThreadScheduledExecutor(); // .newFixedThreadPool(1);
-        RateLimitingPrioQ prioQ = new RateLimitingPrioQ(1, 5);
+        RateLimitingPrioQv2 prioQ = new RateLimitingPrioQv2(1, 5);
         Random random = new Random(42L);
         final Object lock = new Object();
         final Object sleepLock = new Object();
@@ -39,6 +40,7 @@ public class Main {
 
                     while(req_cnt_eq <= MAX_REQUESTS) {
 
+                        //TODO: make it csv compatible!!
                         StringBuilder userInData = new StringBuilder("IN " + req_cnt_eq + ":");
                         req_cnt_eq++;
                         User user = null;
@@ -51,8 +53,12 @@ public class Main {
                         }
                         // or let the dice decide the distribution
 //                           User user = new User(random.nextInt(3), ++cnt);
-                        prioQ.enQuserRequest(user);
-                        logger.info("Enqueued user w UID: " + user.getUID() + " cnt: " + user.getCnt());
+                        try {
+                            prioQ.enQuserRequest(user);
+                        } catch (InterruptedException e) {
+                            throw new RuntimeException(e);
+                        }
+//                        logger.info("Enqueued user w UID: " + user.getUID() + " cnt: " + user.getCnt());
                         synchronized (lock) {
                             userInData.append(user.toString());
 
@@ -66,16 +72,23 @@ public class Main {
             executorService2.execute(new Runnable() {
                 public void run() {
                     logger.info("Dequeueing done by Thread: " + Thread.currentThread().getId());
-
+                  /*
+                    try {
+                        Thread.sleep(5000);
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
+                  */
+                    synchronized (sleepLock) {
+                        try {
+                            sleepLock.wait(0, 500_000);
+                        } catch (InterruptedException e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
                     while(req_cnt_dq <= MAX_REQUESTS ) {
 
-                        synchronized (sleepLock) {
-                            try {
-                                sleepLock.wait(0, 500_000);
-                            } catch (InterruptedException e) {
-                                throw new RuntimeException(e);
-                            }
-                        }
+                        //TODO: make it csv compatible!!
                         StringBuilder userOutData = new StringBuilder("OUT " + req_cnt_dq + ":");
                         req_cnt_dq++;
 
@@ -85,7 +98,7 @@ public class Main {
                         } catch (InterruptedException e) {
                             throw new RuntimeException(e);
                         }
-                        logger.info("dequeued userRequest:" + userRequest.getCnt());
+//                        logger.info("dequeued userRequest:" + userRequest.getCnt());
                         userOutData.append(userRequest.toString());
 
                         JSONObject jsonMapAfterDeQ = prioQ.convMapToJSONObj(prioQ.getRequestCounterMap());
@@ -95,18 +108,26 @@ public class Main {
                 }
             });
 
-        // shutdown both executor services:
-        executorService.shutdown();
-        executorService.awaitTermination(1000L, TimeUnit.MILLISECONDS );
-        if (executorService.isTerminated()) {
-            logger.info("execSVC1 shutdown");
-        }
+            executorService2.shutdown();
+            try {
+                executorService2.awaitTermination(10000L, TimeUnit.MILLISECONDS );
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+            if (executorService2.isTerminated()) {
+                logger.info("execSVC2 has shutdown.");
+            }
+            // shutdown both  executor service:
+            executorService.shutdown();
+            try {
+                executorService.awaitTermination(10000L, TimeUnit.MILLISECONDS );
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+            if (executorService.isTerminated()) {
+                logger.info("execSVC1 has shutdown");
+            }
 
-        executorService2.shutdown();
-        executorService2.awaitTermination(1000L, TimeUnit.MILLISECONDS );
-        if (executorService2.isTerminated()) {
-            logger.info("execSVC2 has shutdown.");
-        }
 
        /* prioQ.writeToFile("//#########################Job is done!########################\n");
         prioQ.writeToFile("Job finished DateTime: " + LocalDateTime.now() + "\n");
