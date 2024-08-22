@@ -25,7 +25,7 @@ public class Main {
     public static void main(String[] args) throws InterruptedException {
         ExecutorService executorService = Executors.newSingleThreadScheduledExecutor();   //.newFixedThreadPool(1);
         ExecutorService executorService2 = Executors.newSingleThreadScheduledExecutor(); // .newFixedThreadPool(1);
-        RateLimitingPrioQv2 prioQ = new RateLimitingPrioQv2(1, 5);
+        RateLimitingPrioQv3 prioQ = new RateLimitingPrioQv3(1, 5);
         Random random = new Random(42L);
         final Object lock = new Object();
         final Object sleepLock = new Object();
@@ -73,14 +73,14 @@ public class Main {
             executorService2.execute(new Runnable() {
                 public void run() {
                     logger.info("Dequeueing done by Thread: " + Thread.currentThread().getId());
-//                  /*
+                  /*
                         try {
                             Thread.sleep(0, 500_000);
                         } catch (InterruptedException e) {
                             throw new RuntimeException(e);
                         }
-//                  */
-                    while(req_cnt_dq <= MAX_REQUESTS + 5) {
+                  */
+                    while(req_cnt_dq <= MAX_REQUESTS + 150) {
                   /*
                         try {
                             Thread.sleep(0, 1_000);
@@ -97,8 +97,7 @@ public class Main {
                             }
                         }
                    */
-                        //TODO: make it csv compatible!!
-                        StringBuilder userOutData = new StringBuilder("OUT," + prioQ.getdQcnt() + "," + req_cnt_dq + ",");
+                        StringBuilder userOutData = new StringBuilder("OUT," + req_cnt_dq + ",");
                         req_cnt_dq++;
 
                         User userRequest = null;
@@ -138,7 +137,7 @@ public class Main {
             if (executorService2.isTerminated()) {
                 logger.info("execSVC2 has shutdown.");
             }
-            // shutdown both  executor service:
+            // shutdown both executor services:
             executorService.shutdown();
             try {
                 executorService.awaitTermination(1000L, TimeUnit.MILLISECONDS );
