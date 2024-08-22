@@ -4,15 +4,25 @@ import java.time.LocalTime;
 import java.util.Objects;
 
 public class User {
-    //this UID must most probably be constituted by the user's IP address
-    // and the port number of the socket connection. So in principle the socket address of the http connection.
+
+    //TODO:this UID must most probably be constituted by the user's IP address
+    // and the port number of the socket. So in principle the socket address of the tcp connection.
     private int UID;
     private Long arrivalTime;
     private int cnt;
     private String priority;
+    private Long dQTime;
 
+    /*
+    from System.nanoTime() api documentation:
+    "@returns the current value of the running Java Virtual Machine's high-resolution time source, in nanoseconds"
+    but beware:
+    "The values returned by this method become meaningful only when the difference between two such values,
+    obtained within the same instance of a Java virtual machine, is computed."
+    */
     public User(int UID, int cnt) {
-        this.arrivalTime = LocalTime.now().toNanoOfDay(); // this is used as default metric for PrioQ
+        this.arrivalTime = System.nanoTime();//LocalTime.now().toNanoOfDay();
+        this.dQTime = 0L;//System.nanoTime();
         this.UID = UID;  // only needed for mapping user to request counter!
         this.priority = "F"; // TODO: magic number
         this.cnt = cnt;
@@ -32,13 +42,20 @@ public class User {
     //TODO: make it csv compatible!!
     @Override
     public synchronized String toString() {
+        return UID + "," + arrivalTime + "," + dQTime + "," + priority + "," + cnt;
+    }
+/*
+    @Override
+    public synchronized String toString() {
         return "User{" +
                 "UID=" + UID +
                 ", arrTime=" + arrivalTime +
+                ", arrTime=" + dQTime +
                 ", prioQ=" + priority +
                 ", cnt= " + cnt +
                 '}';
     }
+*/
 
     public synchronized int getUID() {
         return UID;
@@ -60,5 +77,11 @@ public class User {
         return cnt;
     }
 
+    public Long getDQTime() {
+        return dQTime;
+    }
 
+    public void setdQTime(Long dQTime) {
+        this.dQTime = dQTime;
+    }
 }

@@ -1,6 +1,7 @@
 package org.example;
 
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.Objects;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
@@ -29,8 +30,8 @@ public class Main {
         final Object lock = new Object();
         final Object sleepLock = new Object();
 
-        prioQ.writeToFile("\nStart DateTime: " + LocalDateTime.now() + "\n");
-        prioQ.writeToFile("//#########################Job started!########################\n");
+//        prioQ.writeToFile("\nStart DateTime: " + LocalDateTime.now() + "\n");
+        //prioQ.writeToFile("//#########################Job started!########################\n");
 
 
 
@@ -41,7 +42,7 @@ public class Main {
                     while(req_cnt_eq <= MAX_REQUESTS) {
 
                         //TODO: make it csv compatible!!
-                        StringBuilder userInData = new StringBuilder("IN " + req_cnt_eq + ":");
+                        StringBuilder userInData = new StringBuilder("IN," + req_cnt_eq +  ",");
                         req_cnt_eq++;
                         User user = null;
                         // create User 2 requests more frequent:
@@ -63,7 +64,7 @@ public class Main {
                             userInData.append(user.toString());
 
                             JSONObject jsonMapBeforeDeQ = prioQ.convMapToJSONObj(prioQ.getRequestCounterMap());
-                            prioQ.writeToFile(userInData + " - " + jsonMapBeforeDeQ.toString() + "\n");
+                            prioQ.writeToFile(userInData + /*" - " + jsonMapBeforeDeQ.toString() + */"\n");
                         }
                     }
                 }
@@ -72,45 +73,65 @@ public class Main {
             executorService2.execute(new Runnable() {
                 public void run() {
                     logger.info("Dequeueing done by Thread: " + Thread.currentThread().getId());
-                  /*
-                    try {
-                        Thread.sleep(5000);
-                    } catch (InterruptedException e) {
-                        throw new RuntimeException(e);
-                    }
-                  */
-                    synchronized (sleepLock) {
+//                  /*
                         try {
-                            sleepLock.wait(0, 500_000);
+                            Thread.sleep(0, 500_000);
                         } catch (InterruptedException e) {
                             throw new RuntimeException(e);
                         }
-                    }
-                    while(req_cnt_dq <= MAX_REQUESTS ) {
-
+//                  */
+                    while(req_cnt_dq <= MAX_REQUESTS + 5) {
+                  /*
+                        try {
+                            Thread.sleep(0, 1_000);
+                        } catch (InterruptedException e) {
+                            throw new RuntimeException(e);
+                        }
+                  */
+                  /*
+                        synchronized (sleepLock) {
+                            try {
+                                sleepLock.wait(0, 1_000);
+                            } catch (InterruptedException e) {
+                                throw new RuntimeException(e);
+                            }
+                        }
+                   */
                         //TODO: make it csv compatible!!
-                        StringBuilder userOutData = new StringBuilder("OUT " + req_cnt_dq + ":");
+                        StringBuilder userOutData = new StringBuilder("OUT," + prioQ.getdQcnt() + "," + req_cnt_dq + ",");
                         req_cnt_dq++;
 
                         User userRequest = null;
                         try {
                             userRequest = prioQ.deQuserRequest();
+                            if (userRequest == null) {
+                                System.out.println("User dequeued is null.");
+                                continue;}
+                            userRequest.setdQTime(System.nanoTime());
                         } catch (InterruptedException e) {
                             throw new RuntimeException(e);
                         }
+
 //                        logger.info("dequeued userRequest:" + userRequest.getCnt());
                         userOutData.append(userRequest.toString());
 
                         JSONObject jsonMapAfterDeQ = prioQ.convMapToJSONObj(prioQ.getRequestCounterMap());
-                        prioQ.writeToFile(userOutData + " - " + jsonMapAfterDeQ.toString() + "\n");
+                        prioQ.writeToFile(userOutData /*+ " - " + jsonMapAfterDeQ.toString()*/ + "\n");
 
                     }
+                    /*synchronized (sleepLock) {
+                        try {
+                            sleepLock.wait(2_000, 0);
+                        } catch (InterruptedException e) {
+                            throw new RuntimeException(e);
+                        }
+                    }*/
                 }
             });
 
             executorService2.shutdown();
             try {
-                executorService2.awaitTermination(10000L, TimeUnit.MILLISECONDS );
+                executorService2.awaitTermination(500L, TimeUnit.MILLISECONDS );
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
@@ -120,7 +141,7 @@ public class Main {
             // shutdown both  executor service:
             executorService.shutdown();
             try {
-                executorService.awaitTermination(10000L, TimeUnit.MILLISECONDS );
+                executorService.awaitTermination(1000L, TimeUnit.MILLISECONDS );
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }

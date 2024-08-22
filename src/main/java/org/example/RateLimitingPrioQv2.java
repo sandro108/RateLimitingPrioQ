@@ -7,6 +7,8 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.Comparator;
 import java.util.Map;
 import java.util.Queue;
@@ -36,8 +38,8 @@ public class RateLimitingPrioQv2  {
 
     /* after RESET_CNT dequeues, reset the dQcnt to avoid overflows*/
     private final static int RESET_CNT = 20;
-    int dQcnt = 0;
-    String FILE_OUT = "./log.txt";
+    private int dQcnt = 0;
+    String FILE_OUT = "./log." + LocalDateTime.now() + ".csv";
 
 
     //TODO: Remove everything related to RateLimiter class
@@ -85,16 +87,16 @@ public class RateLimitingPrioQv2  {
                 boolean isATDaboveThresh = isArrTimeDiffAboveThresh(user, prevArrTime, currArrTime);
                 if (userPrioMap.get(uid) != LOW_PRIO && newCount > REQUEST_COUNT_LIMIT && !isATDaboveThresh) {
                     this.userPrioMap.replace(uid, LOW_PRIO);
-                    writeToFile("User: " + uid + ", request: " + user.getCnt() + " has been downgraded to "
-                            + userPrioMap.get(uid) + ".\n");
+                   // writeToFile("User: " + uid + ", request: " + user.getCnt() + " has been downgraded to "
+                         //   + userPrioMap.get(uid) + ".\n");
                 }
                 //TODO: (maybe add 4th map to differentiate between
                 // request count in general (for statistical purposes rather) and request count
                 // that gets reset after arrivalTimeThreshold was exceeded.
                 if (userPrioMap.get(uid) != HIGH_PRIO && isATDaboveThresh) {
                     userPrioMap.replace(uid, HIGH_PRIO);
-                    writeToFile("User: " + uid + " has been upgraded to HIGH_PRIO.\n");
-                    newCount = 1;
+                    //writeToFile("User: " + uid + " has been upgraded to HIGH_PRIO.\n");
+                    //newCount = 1;
                 }
                 if (userPrioMap.get(uid) == HIGH_PRIO) { // add new request of known user to prioQ
                     this.fastQ.put(user);
@@ -118,17 +120,22 @@ public class RateLimitingPrioQv2  {
      */
     public User deQuserRequest() throws InterruptedException {
         User user = null;
-        dQcnt++;
-        if (dQcnt % swapQ == 0) {
-            user = this.slowQ.take(); // retrieve or wait/block for user who's first in slowQ
+//        dQcnt++;
+        if (this.slowQ.isEmpty() && this.fastQ.isEmpty()) {
+            //TODO: block here and wait on a conditional variable
+        }
+        else if ((!this.slowQ.isEmpty() && dQcnt % swapQ == 0) || (!this.slowQ.isEmpty() && dQcnt % swapQ != 0 && this.fastQ.isEmpty())) {
+            user = this.slowQ.poll(); // retrieve or wait/block for user who's first in slowQ
 //            System.out.println("--->dequeueing slowQ: " + dQcnt);
             logger.info("dequeued userRequest on slowQ:" + user.getCnt());
+            dQcnt++;
             if (dQcnt == RESET_CNT) {
                 dQcnt = 0;
-                System.out.println("Counter reset: " + dQcnt);
+//                System.out.println("Counter reset: " + dQcnt);
             }
-        } else {
-            user = this.fastQ.take(); // retrieve or wait/block for user who's first in fastQ
+        } else if ((!this.fastQ.isEmpty() && dQcnt % swapQ != 0) || (!this.fastQ.isEmpty() && dQcnt % swapQ == 0 && this.slowQ.isEmpty())) {
+            user = this.fastQ.poll(); // retrieve or wait/block for user who's first in fastQ
+            dQcnt++;
 //            System.out.println("dequeueing fastQ: " + dQcnt);
             logger.info("dequeued userRequest on fastQ:" + user.getCnt());
         }
@@ -196,4 +203,7 @@ public class RateLimitingPrioQv2  {
         REQUEST_COUNT_LIMIT = requestCountLimit;
     }
 
+    public int getdQcnt() {
+        return dQcnt;
+    }
 }
