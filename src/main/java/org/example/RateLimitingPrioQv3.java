@@ -53,7 +53,7 @@ public class RateLimitingPrioQv3 {
         this.fastQ = new LinkedBlockingQueue<>();
         this.slowQ = new LinkedBlockingQueue<>();
         REQUEST_COUNT_LIMIT = requestCountLimit;
-        PENALTY_LIMIT = REQUEST_COUNT_LIMIT + 10;
+        PENALTY_LIMIT = REQUEST_COUNT_LIMIT + 50; //was @ 10
 
     }
 

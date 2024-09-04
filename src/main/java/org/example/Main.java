@@ -18,14 +18,14 @@ public class Main {
 
     /*this is just for print outs of sequence */
     static int cnt = 0;
-    private static final int MAX_REQUESTS = 50;
+    private static final int MAX_REQUESTS = 500;
     private static int req_cnt_dq = 1;
     private static int req_cnt_eq = 1;
 
     public static void main(String[] args) throws InterruptedException {
         ExecutorService executorService = Executors.newSingleThreadScheduledExecutor();   //.newFixedThreadPool(1);
         ExecutorService executorService2 = Executors.newSingleThreadScheduledExecutor(); // .newFixedThreadPool(1);
-        RateLimitingPrioQv3 prioQ = new RateLimitingPrioQv3(1, 5);
+        RateLimitingPrioQv3 prioQ = new RateLimitingPrioQv3(1, 30); //was 5
         Random random = new Random(42L);
         final Object lock = new Object();
         final Object sleepLock = new Object();
@@ -80,7 +80,7 @@ public class Main {
                             throw new RuntimeException(e);
                         }
                   */
-                    while(req_cnt_dq <= MAX_REQUESTS + 200) {
+                    while(req_cnt_dq <= MAX_REQUESTS + 2000) {
                   /*
                         try {
                             Thread.sleep(0, 1_000);
