@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.Comparator;
 import java.util.Map;
+import static org.example.RLPQ_Config.*;
 import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -29,28 +30,20 @@ public class RateLimitingPrioQv2  {
     private BlockingQueue<User> fastQ;
 
     private BlockingQueue<User> slowQ;
-    private static int REQUEST_COUNT_LIMIT;
-    private final static int HIGH_PRIO = 100;
-    private final static int LOW_PRIO = 20;
 
-    /* after dequeueing swapQ times, swap from fastQ to slowQ once */
-    private final static int swapQ = 5;
-
-    /* after RESET_CNT dequeues, reset the dQcnt to avoid overflows*/
-    private final static int RESET_CNT = 20;
     private int dQcnt = 0;
-    String FILE_OUT = "./log." + LocalDateTime.now() + ".csv";
+
 
 
     //TODO: Remove everything related to RateLimiter class
     public RateLimitingPrioQv2(int permitsPerTimeUnit, int requestCountLimit) {
-        this.rateLimiter = RateLimiter.create(permitsPerTimeUnit);
+//        this.rateLimiter = RateLimiter.create(permitsPerTimeUnit);
         this.requestCounterMap = new ConcurrentHashMap<>();
         this.lastArrivalTimeMap = new ConcurrentHashMap<>();
         this.userPrioMap = new ConcurrentHashMap<>();
         this.fastQ = new LinkedBlockingQueue<>();
         this.slowQ = new LinkedBlockingQueue<>();
-        REQUEST_COUNT_LIMIT = requestCountLimit;
+  //      REQUEST_COUNT_LIMIT = requestCountLimit;
 
     }
 
@@ -59,7 +52,7 @@ public class RateLimitingPrioQv2  {
         long arrTimeDiff = userCurrent - userPrev;
 //        System.out.println("UID: " + user.getUID() + " cnt: " + user.getCnt() + " CAT: " + userCurrent + ", PAT: " + userPrev + ", ATD: " + arrTimeDiff);
 //        logger.info("Arrival time difference: " + arrTimeDiff);
-        if (arrTimeDiff > 800_000L) {  //nanos! //TODO: magic number!
+        if (arrTimeDiff > ARRIVL_TIME_DIFF_THRESH) {  //nanos! /
             return true;
         }
         return false;
@@ -191,17 +184,12 @@ public class RateLimitingPrioQv2  {
         return FILE_OUT;
     }
 
-    public void setFILE_OUT(String FILE_OUT) {
-        this.FILE_OUT = FILE_OUT;
-    }
+
 
     public static int getRequestCountLimit() {
         return REQUEST_COUNT_LIMIT;
     }
 
-    public static void setRequestCountLimit(int requestCountLimit) {
-        REQUEST_COUNT_LIMIT = requestCountLimit;
-    }
 
     public int getdQcnt() {
         return dQcnt;

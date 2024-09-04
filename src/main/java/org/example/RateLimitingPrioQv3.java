@@ -13,6 +13,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Logger;
+import static org.example.RLPQ_Config.*;
 
 public class RateLimitingPrioQv3 {
 
@@ -29,31 +30,19 @@ public class RateLimitingPrioQv3 {
     private BlockingQueue<User> fastQ;
 
     private BlockingQueue<User> slowQ;
-    private static int REQUEST_COUNT_LIMIT;
-    private static int PENALTY_LIMIT;
-    private final static int HIGH_PRIO = 100;
-    private final static int LOW_PRIO = 20;
-    private final static int REJECTED = 0;
 
-    /* after dequeueing swapQ times, swap from fastQ to slowQ once */
-    private final static int swapQ = 5;
-
-    /* after RESET_CNT dequeues, reset the dQcnt to avoid overflows*/
-    private final static int RESET_CNT = 20;
     private int dQcnt = 0;
-    String FILE_OUT = "./log." + LocalDateTime.now() + ".csv";
 
 
     //TODO: Remove everything related to RateLimiter class
     public RateLimitingPrioQv3(int permitsPerTimeUnit, int requestCountLimit) {
-        this.rateLimiter = RateLimiter.create(permitsPerTimeUnit);
+     //   this.rateLimiter = RateLimiter.create(permitsPerTimeUnit);
         this.requestCounterMap = new ConcurrentHashMap<>();
         this.lastArrivalTimeMap = new ConcurrentHashMap<>();
         this.userPrioMap = new ConcurrentHashMap<>();
         this.fastQ = new LinkedBlockingQueue<>();
         this.slowQ = new LinkedBlockingQueue<>();
-        REQUEST_COUNT_LIMIT = requestCountLimit;
-        PENALTY_LIMIT = REQUEST_COUNT_LIMIT + 50; //was @ 10
+   //     REQUEST_COUNT_LIMIT = requestCountLimit;
 
     }
 
@@ -65,7 +54,7 @@ public class RateLimitingPrioQv3 {
        /* if (arrTimeDiff > 800_000L) {  //nanos! //TODO: magic number!
             return false;
         }*/
-        return arrTimeDiff < 10_000_000L; //nanos! //TODO: magic number!
+        return arrTimeDiff < ARRIVL_TIME_DIFF_THRESH; //nanos! //TODO: magic number!
     }
 
     /**
@@ -98,20 +87,20 @@ public class RateLimitingPrioQv3 {
                     userPrioMap.replace(uid, HIGH_PRIO);
                 }
                 // TODO: How can a rejected user be redeemed??
-                if (prio == LOW_PRIO && (reqCount > 2 * PENALTY_LIMIT) && comingInTooFast) { //TODO: set back to != HIGH_PRIO later
+                if (prio == LOW_PRIO && (reqCount > /*2 * */PENALTY_LIMIT) && comingInTooFast) { //TODO: set back to != HIGH_PRIO later
                     userPrioMap.replace(uid, REJECTED);
                 }
                 /* now start enqueue (or reject) according to priority */
                 if (userPrioMap.get(uid) == REJECTED) {
-                    user.setPriority("REJECTED!!!"); // TODO: only for dev, remove later (replace with HTTP-Response:<<Too many request>>)
+                    user.setPriority("2"); // 2 stands for REJECTED TODO: only for dev, remove later (replace with HTTP-Response:<<Too many request>>)
                 }
                 else if (userPrioMap.get(uid) == HIGH_PRIO) {
                     this.fastQ.put(user);
-                    user.setPriority("F"); // TODO: only for dev, remove later
+                    user.setPriority("0"); // 0 stands for fastQ TODO: only for dev, remove later
                     logger.info("Enqueued user to fastQ - UID: " + user.getUID() + " cnt: " + user.getCnt());
                 } else {
                     this.slowQ.put(user);
-                    user.setPriority("S"); // TODO: only for dev, remove later
+                    user.setPriority("1"); // 1 stands for slowQ TODO: only for dev, remove later
                     logger.info("Enqueued user to slowQ - UID: " + user.getUID() + " cnt: " + user.getCnt());
                 }
                 this.requestCounterMap.replace(uid, reqCount); // update request counter
@@ -195,16 +184,8 @@ public class RateLimitingPrioQv3 {
         return FILE_OUT;
     }
 
-    public void setFILE_OUT(String FILE_OUT) {
-        this.FILE_OUT = FILE_OUT;
-    }
-
     public static int getRequestCountLimit() {
         return REQUEST_COUNT_LIMIT;
-    }
-
-    public static void setRequestCountLimit(int requestCountLimit) {
-        REQUEST_COUNT_LIMIT = requestCountLimit;
     }
 
     public int getdQcnt() {
