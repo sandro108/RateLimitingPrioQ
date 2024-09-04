@@ -3,6 +3,7 @@ package org.example;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.Objects;
+import static org.example.RLPQ_Config.*;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -12,21 +13,23 @@ import java.util.logging.*;
 
 import org.json.*;
 
+//import static org.example.RLPQ_Config.MAX_REQUESTS;
+
 public class Main {
 
     private static final Logger logger = Logger.getLogger(Main.class.getName());
 
     /*this is just for print outs of sequence */
     static int cnt = 0;
-    private static final int MAX_REQUESTS = 500;
+
     private static int req_cnt_dq = 1;
     private static int req_cnt_eq = 1;
 
     public static void main(String[] args) throws InterruptedException {
         ExecutorService executorService = Executors.newSingleThreadScheduledExecutor();   //.newFixedThreadPool(1);
         ExecutorService executorService2 = Executors.newSingleThreadScheduledExecutor(); // .newFixedThreadPool(1);
-        RateLimitingPrioQv3 prioQ = new RateLimitingPrioQv3(1, 30); //was 5
-        Random random = new Random(42L);
+        RateLimitingPrioQv3 prioQ = new RateLimitingPrioQv3(1, REQUEST_COUNT_LIMIT); //was 5
+        Random random = new Random(RANDOM_SEED);
         final Object lock = new Object();
         final Object sleepLock = new Object();
 
@@ -41,19 +44,18 @@ public class Main {
 
                     while(req_cnt_eq <= MAX_REQUESTS) {
 
-                        //TODO: make it csv compatible!!
                         StringBuilder userInData = new StringBuilder("IN," + req_cnt_eq +  ",");
                         req_cnt_eq++;
                         User user = null;
-                        // create User 2 requests more frequent:
+                        // create User 'FAVORED_USER' requests more frequent:
                         double rNum = random.nextDouble();
-                        if (rNum > 0.3) {
-                            user = new User(2, ++cnt);
+                        if (rNum > REQ_DIST_PROBABILITY) {
+                            user = new User(FAVORED_USER, ++cnt);
                         } else {
-                            user = new User(random.nextInt(3), ++cnt);
+                            user = new User(random.nextInt(MAX_USER), ++cnt);
                         }
                         // or let the dice decide the distribution
-//                           User user = new User(random.nextInt(3), ++cnt);
+//                           User user = new User(random.nextInt(MAX_USER), ++cnt);
                         try {
                             prioQ.enQuserRequest(user);
                         } catch (InterruptedException e) {

@@ -10,7 +10,7 @@ public class User {
     private int UID;
     private Long arrivalTime;
     private int cnt;
-    private String priority;
+    private String priority;  /* this is a field reuse, should be called 'qType' or something*/
     private Long dQTime;
 
     /*
@@ -24,7 +24,7 @@ public class User {
         this.arrivalTime = System.nanoTime();//LocalTime.now().toNanoOfDay();
         this.dQTime = 0L;//System.nanoTime();
         this.UID = UID;  // only needed for mapping user to request counter!
-        this.priority = "F"; // TODO: magic number
+        this.priority = "0"; // 0 stands for fastQ TODO: magic number (only for development)
         this.cnt = cnt;
     }
     @Override
