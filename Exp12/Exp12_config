@@ -25,11 +25,11 @@ public class RLPQ_Config {
 
     final static String FILE_OUT = "./log." + LocalDateTime.now() + ".csv";
 
-    final static double REQ_DIST_PROBABILITY = 0.66;
+    final static double REQ_DIST_PROBABILITY = 0.3;
 
     final static int FAVORED_USER = 2;
 
-    final static int MAX_USER = 2;
+    final static int MAX_USER = 3;
 
     final static Long RANDOM_SEED = 42L;
 

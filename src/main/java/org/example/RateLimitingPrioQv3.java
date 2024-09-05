@@ -51,10 +51,10 @@ public class RateLimitingPrioQv3 {
         long arrTimeDiff = userCurrent - userPrev;
 //        System.out.println("UID: " + user.getUID() + " cnt: " + user.getCnt() + " CAT: " + userCurrent + ", PAT: " + userPrev + ", ATD: " + arrTimeDiff);
 //        logger.info("Arrival time difference: " + arrTimeDiff);
-       /* if (arrTimeDiff > 800_000L) {  //nanos! //TODO: magic number!
+       /* if (arrTimeDiff > 800_000L) {  //nanos!
             return false;
         }*/
-        return arrTimeDiff < ARRIVL_TIME_DIFF_THRESH; //nanos! //TODO: magic number!
+        return arrTimeDiff < ARRIVL_TIME_DIFF_THRESH; //nanos
     }
 
     /**
@@ -91,14 +91,15 @@ public class RateLimitingPrioQv3 {
                     userPrioMap.replace(uid, REJECTED);
                 }
                 /* now start enqueue (or reject) according to priority */
-                if (userPrioMap.get(uid) == REJECTED) {
+               if (userPrioMap.get(uid) == REJECTED) {
                     user.setPriority("2"); // 2 stands for REJECTED TODO: only for dev, remove later (replace with HTTP-Response:<<Too many request>>)
                 }
                 else if (userPrioMap.get(uid) == HIGH_PRIO) {
                     this.fastQ.put(user);
                     user.setPriority("0"); // 0 stands for fastQ TODO: only for dev, remove later
                     logger.info("Enqueued user to fastQ - UID: " + user.getUID() + " cnt: " + user.getCnt());
-                } else {
+                }
+                else {
                     this.slowQ.put(user);
                     user.setPriority("1"); // 1 stands for slowQ TODO: only for dev, remove later
                     logger.info("Enqueued user to slowQ - UID: " + user.getUID() + " cnt: " + user.getCnt());
@@ -116,7 +117,6 @@ public class RateLimitingPrioQv3 {
      */
     public User deQuserRequest() throws InterruptedException {
         User user = null;
-//        dQcnt++;
         if (this.slowQ.isEmpty() && this.fastQ.isEmpty()) {
             //TODO: block here and wait on a conditional variable
         }
@@ -125,9 +125,10 @@ public class RateLimitingPrioQv3 {
             logger.info("dequeued userRequest on slowQ:" + user.getCnt());
             dQcnt++;
             if (dQcnt == RESET_CNT) {
-                dQcnt = 0;
+                dQcnt = 1;
             }
-        } else if ((!this.fastQ.isEmpty() && dQcnt % swapQ != 0) || (!this.fastQ.isEmpty() && dQcnt % swapQ == 0 && this.slowQ.isEmpty())) {
+        }
+        else if ((!this.fastQ.isEmpty() && dQcnt % swapQ != 0) || (!this.fastQ.isEmpty() && dQcnt % swapQ == 0 && this.slowQ.isEmpty())) {
             user = this.fastQ.poll(); // retrieve or wait/block for user who's first in fastQ
             dQcnt++;
             logger.info("dequeued userRequest on fastQ:" + user.getCnt());

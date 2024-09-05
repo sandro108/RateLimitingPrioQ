@@ -82,7 +82,7 @@ public class Main {
                             throw new RuntimeException(e);
                         }
                   */
-                    while(req_cnt_dq <= MAX_REQUESTS + 2000) {
+                    while(req_cnt_dq <= MAX_REQUESTS + D_QUEUE_THREAD_EXTRA_ROUNDS) {
                   /*
                         try {
                             Thread.sleep(0, 1_000);
