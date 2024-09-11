@@ -28,7 +28,7 @@ public class Main {
     public static void main(String[] args) throws InterruptedException {
         ExecutorService executorService = Executors.newSingleThreadScheduledExecutor();   //.newFixedThreadPool(1);
         ExecutorService executorService2 = Executors.newSingleThreadScheduledExecutor(); // .newFixedThreadPool(1);
-        RateLimitingPrioQv3 prioQ = new RateLimitingPrioQv3(1, REQUEST_COUNT_LIMIT); //was 5
+        RateLimitingPrioQv4 prioQ = new RateLimitingPrioQv4(1, REQUEST_COUNT_LIMIT); //was 5
         Random random = new Random(RANDOM_SEED);
         final Object lock = new Object();
         final Object sleepLock = new Object();
